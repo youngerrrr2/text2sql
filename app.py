@@ -56,30 +56,73 @@ SEGMENTS = [
     ("SEGMENT9", "备用 Spare", "0", "—"),
 ]
 
+SEG_LABELS = {
+    "SEGMENT1": "1 公司",
+    "SEGMENT2": "2 科目",
+    "SEGMENT3": "3 成本中心",
+    "SEGMENT4": "4 产品/服务",
+    "SEGMENT5": "5 渠道",
+    "SEGMENT6": "6 国家",
+    "SEGMENT7": "7 内部往来",
+    "SEGMENT8": "8 项目",
+    "SEGMENT9": "9 备用",
+}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_segment_dict() -> pd.DataFrame | None:
+    """段值字典(DW.DW_FND_SEGMENTS_NAME 全量 3,211 行),缓存 1 小时。"""
+    try:
+        cols, rows = db.run_readonly_sql(
+            "SELECT APPLICATION_COLUMN_NAME, FLEX_VALUE, ZHS_DESCRIPTION "
+            "FROM DW.DW_FND_SEGMENTS_NAME",
+            max_rows=5000,
+        )
+        df = pd.DataFrame(rows, columns=["段", "代码", "中文名"])
+        return df.fillna("")
+    except Exception:
+        return None
+
 st.set_page_config(page_title="数仓问数 · 科目余额", page_icon="📊", layout="wide")
 st.title("📊 数仓问数 — GL_BALANCES(科目余额)")
 
 with st.sidebar:
     st.caption("Oracle BITEST · ODS_EBS.GL_BALANCES · 只读账号")
     st.warning("数据截止 2025-01")
-    st.divider()
-    st.subheader("账套字典")
-    st.dataframe(
-        pd.DataFrame(LEDGERS, columns=["LEDGER_ID", "名称", "本位币", "类型"]),
-        width="stretch",
-        hide_index=True,
-        height=430,
-    )
-    st.caption("命名:{主体}_{准则}。“单体8172”指公司段 SEGMENT1,不是账套。")
-    st.divider()
-    st.subheader("科目组合 9 段对照")
-    st.dataframe(
-        pd.DataFrame(SEGMENTS, columns=["段", "含义", "示例值", "中文名"]),
-        width="stretch",
-        hide_index=True,
-        height=310,
-    )
-    st.caption("代码→中文名全表:DW.DW_FND_SEGMENTS_NAME(3,211 行)。问数直接用中文即可。")
+
+    with st.expander("📖 账套字典(20)"):
+        st.dataframe(
+            pd.DataFrame(LEDGERS, columns=["LEDGER_ID", "名称", "本位币", "类型"]),
+            width="stretch",
+            hide_index=True,
+            height=380,
+        )
+        st.caption("命名:{主体}_{准则}。“单体8172”指公司段 SEGMENT1,不是账套。")
+
+    with st.expander("🧩 科目组合 9 段含义"):
+        st.dataframe(
+            pd.DataFrame(SEGMENTS, columns=["段", "含义", "示例值", "中文名"]),
+            width="stretch",
+            hide_index=True,
+            height=300,
+        )
+
+    with st.expander("🔎 段值字典(代码↔中文名,可搜索)", expanded=False):
+        seg_dict = load_segment_dict()
+        if seg_dict is None:
+            st.caption("字典加载失败(数仓连不上),问数功能不受影响。")
+        else:
+            pick = st.selectbox("选段", list(SEG_LABELS.values()), index=2)
+            key = next(k for k, v in SEG_LABELS.items() if v == pick)
+            sub = seg_dict[seg_dict["段"] == key][["代码", "中文名"]]
+            kw = st.text_input("按代码或中文名过滤", "")
+            if kw:
+                mask = sub["代码"].str.contains(kw, case=False, regex=False, na=False) | sub[
+                    "中文名"
+                ].str.contains(kw, case=False, regex=False, na=False)
+                sub = sub[mask]
+            st.dataframe(sub, width="stretch", hide_index=True, height=300)
+            st.caption(f"{len(sub)} 条 / 全段共 {len(seg_dict)} 条")
 
 
 def render_answer(item: dict) -> None:
