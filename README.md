@@ -13,6 +13,17 @@ cp .env.example .env   # 填入实际凭证(值不要加引号,密码含 # 没�
 
 ## 用法
 
+### 网页前端(推荐)
+
+双击项目根目录的 `问数.bat` → 浏览器自动打开(Sample: http://localhost:8501),聊天框直接中文提问。
+
+```bash
+# 等价命令行方式
+.venv/Scripts/python -m streamlit run app.py
+```
+
+### 命令行
+
 ```bash
 # Windows 下务必加 -X utf8(控制台 GBK)
 .venv/Scripts/python -X utf8 ask.py "2024年12月 HMPL_PRC 账套各币种的本币月末净余额"

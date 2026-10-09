@@ -14,7 +14,6 @@ from decimal import Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.stdout.reconfigure(encoding="utf-8")  # Windows GBK 控制台兜底
 
 import db
 import llm
