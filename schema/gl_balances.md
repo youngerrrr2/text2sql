@@ -79,18 +79,38 @@ LAST_UPDATE_DATE、LAST_UPDATED_BY、BUDGET_VERSION_ID、ENCUMBRANCE_TYPE_ID、T
 
 关联条件:`GL_BALANCES.CODE_COMBINATION_ID = GL_CODE_COMBINATIONS.CODE_COMBINATION_ID`(别名建议 gcc)
 
-科目弹性域实际使用 9 个段:
+科目弹性域共 9 段,含义来自 ODS_EBS.FND_ID_FLEX_SEGMENTS(ID_FLEX_CODE='GL#'),为权威定义:
 
-| 段 | 示例值 | 含义 |
+| 段 | 含义 | 示例值 |
 |---|---|---|
-| SEGMENT1 | 8002, 8163, 8172, 8173 | 公司 / 单体代码 |
-| SEGMENT2 | 100200, 102100, 102200, 104000 | 会计科目(6 位;1 开头为资产类) |
-| SEGMENT3 | 0000, 1000, 1500, 2200, 3001 | 部门 / 成本中心(推断) |
-| SEGMENT4 | 00, 012, 064 | 待确认 |
-| SEGMENT5 | 00, 10, 20 | 待确认 |
-| SEGMENT6–SEGMENT9 | | 待确认 |
+| SEGMENT1 | Company 公司/单体 | 8002, 8163, **8172(=HUTCHMED Limited)** |
+| SEGMENT2 | Account 会计科目 | 100200, 102200, B90123(首位含 1–9 及 A、B) |
+| SEGMENT3 | CostCenter 成本中心/部门 | 0000(默认), 9100, 9304 |
+| SEGMENT4 | Prod/Serv 产品/服务 | 999(=通用) |
+| SEGMENT5 | Channel 渠道 | 00 |
+| SEGMENT6 | Country 国家 | CN0(=China) |
+| SEGMENT7 | InterComp 内部往来 | 0000 |
+| SEGMENT8 | Project 项目 | 0000 |
+| SEGMENT9 | Spare 备用 | 0 |
 
-按科目大类过滤用 `gcc.SEGMENT2 LIKE 'x%'`。实测首位取值含数字 **1–9 及字母 A、B**(如 `SUBSTR(gcc.SEGMENT2,1,1)`);按 EBS 惯例 1 开头为资产类,具体科目含义以数据为准、未经业务确认。
+注意:余额数据里大量行的 SEGMENT3–5 等为 `'T'` 或 `'0000'` 等模板/默认值,属正常现象(汇总行),不要当异常过滤掉。
+
+### 段值中文名映射 DW.DW_FND_SEGMENTS_NAME(3,211 行,只读 join 用)
+
+把段代码翻译成中文。关键列:`APPLICATION_COLUMN_NAME`(段名)、`FLEX_VALUE`(段值)、`ZHS_DESCRIPTION`(中文名)、`US_DESCRIPTION`(英文名)。
+覆盖:SEGMENT1 公司 49 个、SEGMENT2 科目 2031 个、SEGMENT3 成本中心 611 个等。
+
+**用户用中文提到科目/公司/部门名称时,必须 join 此表匹配,展示结果时优先输出中文名,不要输出裸代码**:
+
+```sql
+-- 按科目中文名过滤(别名建议 acc / seg1 / seg3 …)
+JOIN DW.DW_FND_SEGMENTS_NAME acc
+  ON acc.APPLICATION_COLUMN_NAME = 'SEGMENT2' AND acc.FLEX_VALUE = gcc.SEGMENT2
+WHERE acc.ZHS_DESCRIPTION LIKE '%土地使用权%'
+-- 公司段/成本中心段同理:APPLICATION_COLUMN_NAME 分别取 'SEGMENT1' / 'SEGMENT3'
+```
+
+中文名匹配不到的代码('T'、'0000' 等)是模板/默认值,属正常;按科目前缀粗分类(`gcc.SEGMENT2 LIKE '1%'` 资产类等 EBS 惯例)只作兜底手段,能用中文名就用中文名。
 
 ### 示例
 
@@ -117,4 +137,22 @@ WHERE gcc.SEGMENT1 = '8172'
   AND b.PERIOD_NAME = '2025-02'
 GROUP BY SUBSTR(gcc.SEGMENT2, 1, 2)
 ORDER BY acct_group
+```
+
+**例 3(join 中文名映射):单体 8172 2024 年 12 月末,科目名含"土地使用权"的本币净余额明细**
+
+```sql
+SELECT acc.ZHS_DESCRIPTION AS 科目,
+       SUM(b.BEGIN_BALANCE_DR_BEQ + b.PERIOD_NET_DR_BEQ
+         - b.BEGIN_BALANCE_CR_BEQ - b.PERIOD_NET_CR_BEQ) AS net_balance_beq
+FROM ODS_EBS.GL_BALANCES b
+JOIN ODS_EBS.GL_CODE_COMBINATIONS gcc
+  ON gcc.CODE_COMBINATION_ID = b.CODE_COMBINATION_ID
+JOIN DW.DW_FND_SEGMENTS_NAME acc
+  ON acc.APPLICATION_COLUMN_NAME = 'SEGMENT2' AND acc.FLEX_VALUE = gcc.SEGMENT2
+WHERE gcc.SEGMENT1 = '8172'
+  AND b.PERIOD_NAME = '2024-12'
+  AND acc.ZHS_DESCRIPTION LIKE '%土地使用权%'
+GROUP BY acc.ZHS_DESCRIPTION
+ORDER BY net_balance_beq
 ```

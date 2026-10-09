@@ -48,7 +48,7 @@ cp .env.example .env   # 填入实际凭证(值不要加引号,密码含 # 没�
 
 ## Roadmap
 
-- [ ] 补全 SEGMENT3–9 的业务含义(找用户确认)后扩充 schema 文档
-- [ ] 接入更多表:GL_LEDGERS 全量、凭证表(GL_JE_*)、辅助核算
+- [x] 段含义 + 段值中文名映射(接 DW.DW_FND_SEGMENTS_NAME,9 段权威定义已写入 schema)
+- [ ] 接入更多表:凭证明细(GL_JE_*,需数仓同步)、汇率表
 - [ ] 错误自愈:SQL 报错时把 ORA 错误回传给 LLM 重试
 - [ ] 多轮对话 / 查询历史
