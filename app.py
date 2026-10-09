@@ -39,9 +39,21 @@ LEDGERS = [
 
 EXAMPLES = [
     "HMPL_PRC 2024年12月各币种的本币月末净余额",
-    "单体8172 2024年12月末各科目大类的本币净余额",
+    "HUTCHMED 2024年12月末,科目名包含土地使用权的本币净余额",
     "2024年全年 HMPL_PRC 每月的本币借贷发生额",
     "单体8172 和 8163 2024年末资产类净余额对比",
+]
+
+SEGMENTS = [
+    ("SEGMENT1", "公司 Company", "8172", "HUTCHMED Limited"),
+    ("SEGMENT2", "科目 Account", "102200", "无形资产原值-土地使用权(中期)"),
+    ("SEGMENT3", "成本中心 CostCenter", "9304", "部门,共 611 个"),
+    ("SEGMENT4", "产品/服务 Prod/Serv", "999", "通用"),
+    ("SEGMENT5", "渠道 Channel", "00", "—"),
+    ("SEGMENT6", "国家 Country", "CN0", "China"),
+    ("SEGMENT7", "内部往来 InterComp", "0000", "—"),
+    ("SEGMENT8", "项目 Project", "0000", "—"),
+    ("SEGMENT9", "备用 Spare", "0", "—"),
 ]
 
 st.set_page_config(page_title="数仓问数 · 科目余额", page_icon="📊", layout="wide")
@@ -59,6 +71,15 @@ with st.sidebar:
         height=430,
     )
     st.caption("命名:{主体}_{准则}。“单体8172”指公司段 SEGMENT1,不是账套。")
+    st.divider()
+    st.subheader("科目组合 9 段对照")
+    st.dataframe(
+        pd.DataFrame(SEGMENTS, columns=["段", "含义", "示例值", "中文名"]),
+        width="stretch",
+        hide_index=True,
+        height=310,
+    )
+    st.caption("代码→中文名全表:DW.DW_FND_SEGMENTS_NAME(3,211 行)。问数直接用中文即可。")
 
 
 def render_answer(item: dict) -> None:
