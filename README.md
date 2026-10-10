@@ -36,9 +36,11 @@ cp .env.example .env   # 填入实际凭证(值不要加引号,密码含 # 没�
 | 文件 | 作用 |
 |---|---|
 | [ask.py](ask.py) | CLI 入口:问题 → SQL → 执行 → 总结 |
+| [app.py](app.py) | Streamlit 网页前端(问数.bat 双击启动) |
 | [db.py](db.py) | Oracle 连接 + 只读执行(拒绝非 SELECT / FOR UPDATE) |
 | [llm.py](llm.py) | 智谱 GLM(anthropic 兼容端点)客户端 |
 | [schema/gl_balances.md](schema/gl_balances.md) | 喂给 LLM 的表结构 + 业务语义(账套字典、金额口径、科目段) |
+| [schema/warehouse-map.md](schema/warehouse-map.md) | 数仓全景表关系图(人类参考,不注入提示词) |
 
 ## 安全
 
